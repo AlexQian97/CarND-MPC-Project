@@ -65,6 +65,22 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+Eigen::MatrixXd transformGlobalToLocal(double x, double y, double psi, const vector<double> & ptsx, const vector<double> & ptsy) 
+{
+  assert(ptsx.size() == ptsy.size());
+  unsigned len = ptsx.size();
+
+  auto waypoints = Eigen::MatrixXd(2,len);
+
+  for (auto i=0; i<len ; ++i){
+    waypoints(0,i) =   cos(psi) * (ptsx[i] - x) + sin(psi) * (ptsy[i] - y);
+    waypoints(1,i) =  -sin(psi) * (ptsx[i] - x) + cos(psi) * (ptsy[i] - y);  
+  } 
+
+  return waypoints;
+
+}
+
 int main() {
   uWS::Hub h;
 
@@ -98,8 +114,46 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+          // Affine transformation. Translate to car coordinate system then rotate to the car's orientation. 
+          // Local coordinates take capital letters. The reference trajectory in local coordinates:
+          Eigen::MatrixXd waypoints = transformGlobalToLocal(px,py,psi,ptsx,ptsy);
+          Eigen::VectorXd Ptsx = waypoints.row(0);
+          Eigen::VectorXd Ptsy = waypoints.row(1);
+
+          // fit a 3rd order polynomial to the waypoints
+          auto coeffs = polyfit(Ptsx, Ptsy, 3);
+          
+          // set initial state
+          double x = 0;
+          double y = 0;
+          double psi = 0;
+
+          // get cross-track error from fit 
+          double cte = polyeval(coeffs, 0);
+
+          // get orientation error from fit
+          double epsi = -atan(coeffs[1]);
+
+          // State after delay.
+          delay = 0.1; // 100ms = 0.1 s
+
+          x = x + ( v * cos(psi) * delay );
+          y = y + ( v * sin(psi) * delay );
+          psi = psi - ( v * delta * delay / mpc.Lf );
+          v = v + a * delay;
+          cte = cte + ( v * sin(epsi) * delay );
+          epsi = epsi - ( v * atan(coeffs[1]) * delay / mpc.Lf );
+
+          // Define the state vector.
+          Eigen::VectorXd state(6);
+          state << x, y, psi, v, cte, epsi;
+
+          // compute the optimal trajectory          
+          // Find the MPC solution.
+          auto vars = mpc.Solve(state, coeffs);
+          
+          double steer_value = vars[0]/deg2rad(25);
+          double throttle_value = vars[1];
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -107,10 +161,18 @@ int main() {
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
 
-          //Display the MPC predicted trajectory 
+          //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
+          for ( int i = 2; i < vars.size(); i++ ) {
+            if ( i % 2 == 0 ) {
+              mpc_x_vals.push_back( vars[i] );
+            } else {
+              mpc_y_vals.push_back( vars[i] );
+            }
+          }
+          
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
@@ -120,6 +182,11 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
+
+          for (unsigned i=0 ; i < ptsx.size(); ++i) {
+            next_x_vals.push_back(Ptsx(i));
+            next_y_vals.push_back(Ptsy(i));
+          }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
