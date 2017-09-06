@@ -3,6 +3,19 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+### The Model
+The vehicle model in this project is a kinematic model because dynamic model has too many parameters to implement. The vehicle is simplified into a bicycle because the distance between front wheels and back wheels remain constant. There are six parameters tracked in the state, position(x,y), heading(psi), velocity(v), cross track error(cte), heading error(epsi). They are updated as follows. 
+
+```
+      // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+      // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+      // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+      // v_[t+1] = v[t] + a[t] * dt
+      // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
+      // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+```
+Meanwhile, there are two parameters in a actuator, change in heading(delta0) and change in velocity(a0). 
+
 ## Dependencies
 
 * cmake >= 3.5
