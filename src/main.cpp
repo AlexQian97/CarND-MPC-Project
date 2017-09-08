@@ -139,8 +139,8 @@ int main() {
           // State after delay.
           double delay = 0.1; // 100ms = 0.1 s
 
-          double x_delay = x0 + ( v * cos(psi) * delay );
-          double y_delay = y0 + ( v * sin(psi) * delay );
+          double x_delay = x0 + ( v * cos(psi0) * delay );
+          double y_delay = y0 + ( v * sin(psi0) * delay );
           double psi_delay = psi0 - ( v * delta * delay / mpc.Lf );
           double v_delay = v + a * delay;
           double cte_delay = cte0 + ( v * sin(epsi0) * delay );
