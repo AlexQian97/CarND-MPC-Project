@@ -16,6 +16,18 @@ The vehicle model in this project is a kinematic model because dynamic model has
 ```
 Meanwhile, there are two parameters in a actuator, change in heading(delta0) and change in velocity(a0). 
 
+### Timestep Length and Elapsed Duration (N & dt)
+I chose N = 10 and dt = 0.1 s, which means the model will predict the future in 1 second. I used to use N = 25 and dt = 0.1 s because they were used in examples in class. However, my laptop is not powerful enough to complete the computation in time and the car drives badly. I think 1 second for a car in a simulator is good enought. As a result, I decreased N from 25 to 10. After test, they are a good combination.
+
+### Polynomial Fitting and MPC Preprocessing
+The reference waypoints are transformed to the local coordinate system for consistency. Furthermore, the first state is the predicted state in 0.1 second in fact. That is for compensating the latency (0.1s). Here is the formulas I used in transformation.
+```
+ X' =   cos(psi) * (ptsx[i] - x) + sin(psi) * (ptsy[i] - y);
+ Y' =  -sin(psi) * (ptsx[i] - x) + cos(psi) * (ptsy[i] - y);  
+```
+
+Then a 3rd order polynomial is fitted.
+
 ## Dependencies
 
 * cmake >= 3.5
